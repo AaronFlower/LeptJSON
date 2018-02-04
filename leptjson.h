@@ -23,6 +23,7 @@ typedef enum {
  */
 typedef struct {
 	lept_type type;
+	double n;
 } lept_value;
 
 
@@ -57,5 +58,12 @@ int lept_parse (lept_value* v, const char* json);
  * 获取 json value 的值。
  */
 lept_type lept_get_type(const lept_value* v);
+
+
+/**
+ * lept_gett_nubmer
+ * 当 lept_type 为 LEPT_NUMBER 时返回 n;
+ */
+double lept_get_number (const lept_value* v);
 
 #endif
