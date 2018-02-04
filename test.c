@@ -25,6 +25,10 @@ static int test_pass = 0;
 
 #define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 
+/**
+ * static 函数的意思是指，该函数只作用于编译单元中，
+ * 如果没有调用能被发现的, 编译时会报 [-Wunused-function] 。
+ */
 static void test_parse_null () {
 	lept_value v;
 	v.type = LEPT_FALSE;
