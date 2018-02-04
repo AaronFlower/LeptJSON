@@ -29,13 +29,6 @@ static int test_pass = 0;
  * static 函数的意思是指，该函数只作用于编译单元中，
  * 如果没有调用能被发现的, 编译时会报 [-Wunused-function] 。
  */
-static void test_parse_null () {
-	lept_value v;
-	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "null"));
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
-}
-
 static void test_parse_expect_value () {
 	lept_value v;
 
@@ -46,6 +39,20 @@ static void test_parse_expect_value () {
 	v.type = LEPT_FALSE;
 	EXPECT_EQ_INT(LEPT_PARSE_EXPECT_VALUE, lept_parse(&v, " "));
 	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+}
+
+#define TEST_LITERAL(expect, json)\
+	do {\
+		lept_value v;\
+		EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, json));\
+		EXPECT_EQ_INT(expect, lept_get_type(&v));\
+	} while(0)
+
+
+static void test_parse_literal () {
+	TEST_LITERAL(LEPT_NULL, "null");
+	TEST_LITERAL(LEPT_FALSE, "false");
+	TEST_LITERAL(LEPT_TRUE, "true");
 }
 
 static void test_parse_invalid_value () {
@@ -67,24 +74,8 @@ static void test_parse_root_not_singular () {
 	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
 }
 
-static void test_parse_true () {
-	lept_value v;
-	v.type = LEPT_FALSE;
-  EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "true"));
-	EXPECT_EQ_INT(LEPT_TRUE, lept_get_type(&v));
-}
-
-static void test_parse_false () {
-	lept_value v;
-	v.type = LEPT_NULL;
-  EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "false"));
-	EXPECT_EQ_INT(LEPT_FALSE, lept_get_type(&v));
-}
-
 static void test_parse () {
-	test_parse_null();
-	test_parse_false();
-	test_parse_true();
+	test_parse_literal();
 	test_parse_expect_value();
 	test_parse_invalid_value();
 	test_parse_root_not_singular();
