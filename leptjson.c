@@ -9,6 +9,9 @@ typedef struct {
 	const char* json;
 } lept_context;
 
+/**
+ * 文本解析时过滤掉其中的空白, 将指针移动到非空白字符的位置。
+ */
 static void lept_parse_whitespace(lept_context* c) {
 	const char *p = c->json;
 	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {
@@ -17,6 +20,46 @@ static void lept_parse_whitespace(lept_context* c) {
 	c->json = p;
 }
 
+static int lept_parse_true(lept_context* c, lept_value* v) {
+	EXPECT(c, 't'); // 使用断言判断是否以 't' 开头，调用此函数程序员要保证。所以使用断言。
+  
+	if (c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e') {
+		return LEPT_PARSE_INVALID_VALUE;		
+	}
+
+	c->json += 3;
+	lept_parse_whitespace(c);
+
+	if (c->json[0] != '\0') { // 不能使用断言。
+		return LEPT_PARSE_ROOT_NOT_SINGULAR;
+	}
+
+	v->type = LEPT_TRUE;
+	return LEPT_PARSE_OK;
+}
+
+/**
+ * 解析 false, LEPT_FALSE
+ */
+static int lept_parse_false(lept_context* c, lept_value* v) {
+	// 程序员在调整此函数时，即已确定值是以 'f' 开头的。
+	// 如果不是则就不应该调用该函数，所以使用断言判断是否以 'f' 开头.
+	EXPECT(c, 'f');
+  
+	if (c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's' || c->json[3] != 'e') {
+		return LEPT_PARSE_INVALID_VALUE;		
+	}
+
+	c->json += 4;
+	lept_parse_whitespace(c);
+
+	if (c->json[0] != '\0') { // 不能使用断言。
+		return LEPT_PARSE_ROOT_NOT_SINGULAR;
+	}
+
+	v->type = LEPT_FALSE;
+	return LEPT_PARSE_OK;
+}
 
 static int lept_parse_null(lept_context* c, lept_value* v) {
 	EXPECT(c, 'n');
@@ -39,6 +82,8 @@ static int lept_parse_null(lept_context* c, lept_value* v) {
 static int lept_parse_value(lept_context *c, lept_value* v) {
 	switch (*c->json) {
 		case 'n': return lept_parse_null(c, v);
+		case 'f': return lept_parse_false(c, v);
+		case 't': return lept_parse_true(c, v);
 		case '\0': return LEPT_PARSE_EXPECT_VALUE;
 		default: return LEPT_PARSE_INVALID_VALUE;
 	}
