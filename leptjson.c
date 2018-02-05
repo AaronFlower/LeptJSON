@@ -2,8 +2,12 @@
 #include <assert.h> /* assert() */
 #include <stdlib.h> /* NULL */
 #include <string.h> /* strcpy */
+#include <math.h> /* HUGE_VALF, HUGE_VAL, HUGE_VALL */
 
 #define EXPECT(c, ch) do { assert(*c->json == (ch)); c->json++; } while(0)
+#define ISDIGIT(ch) ((ch) >= '0' && (ch) <= '9')
+#define ISDIGIT1TO9(ch) ((ch) >= '1' && (ch) <= '9') 
+#define ISTOOBIG(n) ((n) == HUGE_VAL || (n) == -HUGE_VAL)
 
 
 typedef struct {
@@ -19,6 +23,16 @@ static void lept_parse_whitespace(lept_context* c) {
 		p++;
 	}
 	c->json = p;
+}
+
+/**
+ * 将指针移动到非数字位置
+ */
+static void lept_ignore_digit (const char** p) {
+	assert(p != NULL);
+	while (ISDIGIT(**p)) {
+		++*p;
+	}
 }
 
 static int lept_parse_literal (lept_context* c, int expect_value, lept_value *v) {
@@ -59,12 +73,75 @@ static int lept_parse_literal (lept_context* c, int expect_value, lept_value *v)
 	return LEPT_PARSE_OK;
 }
 
+/**
+ * 检查函数是否正确。LEPT_PARSE_OK，LEPT_PARSE_INVALID_VALUE，LEPT_PARSE_ROOT_NOT_SINGULAR 。
+ * @param c 
+ * @param end - 数字结束位置
+ */
+static int lept_validate_number(lept_context *c, const char *end) {
+	const char* p = c->json;
+	
+	// pass sign, 过滤掉符号
+	if (*p == '-') {
+		p ++;
+	}
+
+	// check integer part 整数部分
+	if (ISDIGIT(*p)) {
+		if (*p == '0') {
+			++p;
+		} else {
+			lept_ignore_digit(&p);
+		}
+	} else {
+		return LEPT_PARSE_INVALID_VALUE;
+	}	
+
+	if (*p == '.' || *p == 'e' || *p == 'E') {
+		// check fractional part
+		if (*p == '.') {
+			++p;
+			if (ISDIGIT(*p)) {
+				lept_ignore_digit(&p);
+			}	else {
+				return LEPT_PARSE_INVALID_VALUE;		
+			}
+		}
+
+		if (*p == 'e' || *p == 'E') {
+			++p;
+			if (*p == '+' || *p == '-') {
+				++p;
+			}
+			if (ISDIGIT(*p)) {
+				lept_ignore_digit(&p);
+			} else {
+				return LEPT_PARSE_INVALID_VALUE;
+			}
+		}
+	}
+
+	if (*p != '\0') {
+		return LEPT_PARSE_ROOT_NOT_SINGULAR;
+	}
+	return LEPT_PARSE_OK;
+}
+
 static int lept_parse_number(lept_context *c, lept_value* v) {
 	char *end;
-	/* TODO validate number */
+	int checkRet;
+	if ((checkRet = lept_validate_number(c, end)) != LEPT_PARSE_OK) {
+		return checkRet;
+	}
+	
 	v->n = strtod(c->json, &end);
+
 	if (c->json == end) {
 		return LEPT_PARSE_INVALID_VALUE;
+	}
+	
+	if (ISTOOBIG(v->n)) {
+		return LEPT_PARSE_NUMBER_TOO_BIG;
 	}
 	c->json = end;
 	v->type = LEPT_NUMBER;

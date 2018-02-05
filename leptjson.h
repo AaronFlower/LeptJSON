@@ -36,10 +36,9 @@ enum {
 	LEPT_PARSE_OK = 0,
 	LEPT_PARSE_EXPECT_VALUE, 		// JSON 只含有空白。
 	LEPT_PARSE_INVALID_VALUE,		// 非法的字面值。	
-	LEPT_PARSE_ROOT_NOT_SINGULAR 		// 空白还有其它字符。
+	LEPT_PARSE_ROOT_NOT_SINGULAR, 		// 空白还有其它字符。
+	LEPT_PARSE_NUMBER_TOO_BIG
 };
-
-
 
 /*
  * lept_parse - parse json 
