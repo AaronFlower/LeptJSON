@@ -43,31 +43,28 @@ static int lept_parse_literal (lept_context* c, int expect_value, lept_value *v)
 	assert(expect_value == LEPT_NULL || expect_value == LEPT_FALSE || expect_value == LEPT_TRUE);
 
 	char literal[6];
-	int len, i;
+	size_t i;
 	switch (expect_value) {
 		case LEPT_NULL:
 			strcpy(literal, "null");
-			len = 4;
 			break;
 		case LEPT_FALSE:
 			strcpy(literal, "false");
-			len = 5;
 			break;
 		case LEPT_TRUE:
 			strcpy(literal, "true");
-			len = 4;
 			break;
 	}
 	
 	EXPECT(c, *literal);
 	
-	for (i = 1; i < len; ++i) {
-		if (c->json[i -1] != literal[i]) {
+	for (i = 0; literal[i + 1]; ++i) {
+		if (c->json[i] != literal[i + 1]) {
 			return LEPT_PARSE_INVALID_VALUE;	
 		}
 	}
 	
-	c->json += len - 1;
+	c->json += i; 
 
 	v->type = expect_value;
 	return LEPT_PARSE_OK;
