@@ -4,6 +4,8 @@
 #ifndef LEPTJSON_H__
 #define LEPTJSON_H__
 
+#include <stddef.h> // size_t
+
 /**
  * JSON 数据类型。其中 true, false 分别当作一种类型。
  * 另外，因为 C 语言没有 C++ 的 namespace 概念，所以前面加上一个标识。
@@ -22,8 +24,15 @@ typedef enum {
  * JSON 数据树结构
  */
 typedef struct {
+	union {
+		double n;
+		struct {
+			char* s;
+			size_t len;
+		} s;
+	} u;
+
 	lept_type type;
-	double n;
 } lept_value;
 
 
@@ -37,8 +46,14 @@ enum {
 	LEPT_PARSE_EXPECT_VALUE, 		// JSON 只含有空白。
 	LEPT_PARSE_INVALID_VALUE,		// 非法的字面值。	
 	LEPT_PARSE_ROOT_NOT_SINGULAR, 		// 空白还有其它字符。
-	LEPT_PARSE_NUMBER_TOO_BIG
+	LEPT_PARSE_NUMBER_TOO_BIG,
+	LEPT_PARSE_MISS_QUOTATION_MARK,
+	LEPT_PARSE_INVALID_STRING_ESCAPE,
+	LEPT_PARSE_INVALID_STRING_CHAR
 };
+
+#define lept_init(v) do { (v)->type = LEPT_NULL; } while(0)
+#define lept_set_null(v) lept_free(v)
 
 /*
  * lept_parse - parse json 
@@ -51,6 +66,10 @@ enum {
  */
 int lept_parse (lept_value* v, const char* json);
 
+/*
+ * 释放内存
+ */
+void lept_free(lept_value* v);
 
 /**
  * lept_get_type
@@ -64,5 +83,13 @@ lept_type lept_get_type(const lept_value* v);
  * 当 lept_type 为 LEPT_NUMBER 时返回 n;
  */
 double lept_get_number (const lept_value* v);
+void lept_set_number(lept_value *v, double n);
+
+int lept_get_boolean(const lept_value* v);
+void lept_set_boolean(lept_value *v, int b);
+
+const char* lept_get_string(const lept_value* v);
+void lept_set_string(lept_value* v, const char* s, size_t len);
+size_t lept_get_string_length(const lept_value* v);
 
 #endif
