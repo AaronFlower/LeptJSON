@@ -1,10 +1,16 @@
+# Author: AaronFlower
+
+# A simple example CMake Setup for compiling C Programs. This setup utilizes a single# subdirectory (src) in which all C source(.c) and header (.h) files within that
+# directory are included within the project.
+
 # CMake 最低版本要求
 cmake_minimum_required (VERSION 3.10)
 
-if (CMAKE_C_COMPILED_ID MATCHES "GUN|Clang")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi -pedantic -Wall")
-endif()
+# project name
+project (leptJson)
 
-add_library(leptjson leptjson.c)
-add_executable(leptjson_test test.c)
-target_link_libraries(leptjson_test leptjson)
+# Add a subdirectory to the project. 
+# The CMakeLists.txt file in that subdirectory will
+# be used for further setting up the project.
+
+add_subdirectory( src )
