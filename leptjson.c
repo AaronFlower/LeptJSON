@@ -289,6 +289,13 @@ lept_type lept_get_type(const lept_value* v) {
 }
 
 
+void lept_set_number(lept_value* v, double d) {
+	lept_free(v);
+
+	v->type = LEPT_NUMBER;
+	v->u.n = d;
+}
+
 double lept_get_number(const lept_value *v) {
 	assert(v != NULL && v->type == LEPT_NUMBER);
 	return v->u.n;
@@ -326,4 +333,24 @@ size_t lept_get_string_length (const lept_value *v) {
 	assert(v != NULL && v->type == LEPT_STRING);
 
 	return v->u.s.len;
+}
+
+int lept_get_boolean(const lept_value* v) {
+	assert(v != NULL && (v->type == LEPT_FALSE || v->type == LEPT_TRUE));
+	return v->type;
+}
+
+/**
+ * 在类型改变时，应该尝试去释放之前可能分配的内存。
+ * 释放内存的时候会用断言判断 v 是否为 NULL.
+ */
+void lept_set_boolean(lept_value* v, int b) {
+	lept_free(v);
+	v->type = b ? LEPT_TRUE : LEPT_FALSE;
+}
+
+
+lept_type lept_get_null(const lept_value* v) {
+	assert(v != NULL && v->type == LEPT_NULL);
+	return LEPT_NULL;
 }

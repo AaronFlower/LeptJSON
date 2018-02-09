@@ -24,8 +24,11 @@ static int test_pass = 0;
 	} while(0)
 
 #define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
+#define EXPECT_EQ_NULL(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.10g")
 #define EXPECT_EQ_STRING(expect, actual, len) EXPECT_EQ_BASE(strncmp((expect), (actual), (len)) == 0, expect, actual, "%s")
+
+#define EXPECT_EQ_BOOLEAN(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 
 #define TEST_LITERAL(expect, json)\
 	do {\
@@ -151,6 +154,30 @@ static void test_access_string () {
 	lept_free(&v);
 }
 
+static void test_access_null () {
+	lept_value v;
+	lept_init(&v);
+	EXPECT_EQ_NULL(LEPT_NULL, lept_get_null(&v));
+}
+
+static void test_access_boolean () {
+	lept_value v;
+	lept_init(&v);
+	lept_set_boolean(&v, 1);
+	EXPECT_EQ_BOOLEAN(LEPT_TRUE, lept_get_boolean(&v));
+	lept_set_boolean(&v, 0);
+	EXPECT_EQ_BOOLEAN(LEPT_FALSE, lept_get_boolean(&v));
+}
+
+static void test_access_number () {
+	lept_value v;
+	lept_init(&v);
+	lept_set_number(&v, 3.1415);
+	EXPECT_EQ_DOUBLE(3.1415, lept_get_number(&v));
+	lept_set_number(&v, 2.718);
+	EXPECT_EQ_DOUBLE(2.718, lept_get_number(&v));
+}
+
 static void test_parse_string () {
 	TEST_STRING("", "\"\"");
 	TEST_STRING("Hello", "\"Hello\"");
@@ -168,8 +195,13 @@ static void test_parse () {
 	test_parse_invalid_value();
 	test_parse_root_not_singular();
 	test_parse_number_too_big();
-	test_access_string();
 	test_parse_string();
+
+
+	test_access_string();
+	test_access_boolean();
+	test_access_number();
+	test_access_null();
 }
 
 int main () {
