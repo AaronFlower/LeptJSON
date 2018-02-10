@@ -6,7 +6,7 @@ Guided by [miloyip](https://github.com/miloyip/json-tutorial).
 
 在 XOS 系统中可以安装 [Vagrind](http://www.valgrind.org/) 来测试，[但是高版本的 OS 系统在安装 Vagrind 的时候可能不会成功](https://stackoverflow.com/questions/40650338/valgrind-on-macos-sierra/40713782#40713782)。
 
-我们可以利用 Xcode 来检测内存泄漏问题。所以可以用 `cmake -G Xcode </path/to/CMakeLists.txt>` 来生成 Xcode 项目，但根据 tutorial 的 `CMakeLists.txt` 并不会引入 header 头文件到项目。为了使生成的项目引入所有的 `*.h, *.c` 文件，最终调整了下项目目录和 `CMakeLists.txt` 文件。
+我们可以[利用 Xcode 的 instruments 来检测内存泄漏问题](https://help.apple.com/xcode/mac/9.0/index.html?localePath=en.lproj#/devcef23c572)。所以可以用 `cmake -G Xcode </path/to/CMakeLists.txt>` 来生成 Xcode 项目，但根据 tutorial 的 `CMakeLists.txt` 并不会引入 header 头文件到项目。为了使生成的项目引入所有的 `*.h, *.c` 文件，最终调整了下项目目录和 `CMakeLists.txt` 文件。
 
 ## 项目结构
 
