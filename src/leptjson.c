@@ -93,6 +93,24 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 		char ch = *p++;
 
 		switch (ch) {
+			case '\\':
+				switch (ch) {
+					case '\"': put_c(c, '\"'); break;
+					case '\\': put_c(c, '\\'); break;
+					case '/': put_c(c, '/'); break;
+					case 'b': put_c(c, '\b'); break;
+					case 'f': put_c(c, '\f'); break;
+					case 'n': put_c(c, '\n'); break;
+					case 'r': put_c(c, '\r'); break;
+					case 't': put_c(c, '\t'); break;
+					default:
+						if ((unsigned char)ch < 0x20) {
+							c->top = head;
+							return LEPT_PARSE_INVALID_STRING_ESCAPE;
+						}
+						put_c(c, ch);
+				};
+				break;
 			case '\"':
 				len = c->top - head;
 				lept_set_string(v, (const char*)lept_context_pop(c, len), len);

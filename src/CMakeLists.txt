@@ -1,9 +1,9 @@
 # Sets the compilation flags to report all warnings and enable debugging
 # in the generated object files and executable.
-set(CMAKE_C_FLAGS "-Wall -g")
+set(CMAKE_C_FLAGS "-Wall -g -O0")
 
 if (CMAKE_C_COMPILED_ID MATCHES "GUN|Clang")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi -pedantic -Wall -g")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi -pedantic -Wall -g -O0")
 endif()
 
 # the following file GLOB command will search for all files within the 

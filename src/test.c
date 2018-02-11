@@ -163,19 +163,23 @@ static void test_access_null () {
 static void test_access_boolean () {
 	lept_value v;
 	lept_init(&v);
+  lept_set_string(&v, "a", 1);
 	lept_set_boolean(&v, 1);
 	EXPECT_EQ_BOOLEAN(LEPT_TRUE, lept_get_boolean(&v));
 	lept_set_boolean(&v, 0);
 	EXPECT_EQ_BOOLEAN(LEPT_FALSE, lept_get_boolean(&v));
+	lept_free(&v);
 }
 
 static void test_access_number () {
 	lept_value v;
 	lept_init(&v);
+  lept_set_string(&v, "a", 1);
 	lept_set_number(&v, 3.1415);
 	EXPECT_EQ_DOUBLE(3.1415, lept_get_number(&v));
 	lept_set_number(&v, 2.718);
 	EXPECT_EQ_DOUBLE(2.718, lept_get_number(&v));
+	lept_free(&v);
 }
 
 static void test_parse_string () {
@@ -189,19 +193,18 @@ static void test_parse_expect_value () {
 }
 
 static void test_parse () {
-	test_parse_literal();
-	test_parse_number();
-	test_parse_expect_value();
-	test_parse_invalid_value();
-	test_parse_root_not_singular();
-	test_parse_number_too_big();
-	test_parse_string();
+  test_parse_literal();
+  test_parse_number();
+  test_parse_expect_value();
+  test_parse_invalid_value();
+  test_parse_root_not_singular();
+  test_parse_number_too_big();
+  test_parse_string();
 
-
-	test_access_string();
-	test_access_boolean();
-	test_access_number();
-	test_access_null();
+  test_access_string();
+  test_access_boolean();
+  test_access_number();
+  test_access_null();
 }
 
 int main () {
