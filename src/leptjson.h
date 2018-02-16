@@ -49,7 +49,9 @@ enum {
 	LEPT_PARSE_NUMBER_TOO_BIG,
 	LEPT_PARSE_MISS_QUOTATION_MARK,
 	LEPT_PARSE_INVALID_STRING_ESCAPE,
-	LEPT_PARSE_INVALID_STRING_CHAR
+	LEPT_PARSE_INVALID_STRING_CHAR,
+	LEPT_PARSE_INVALID_UNICODE_HEX,
+	LEPT_PARSE_INVALID_UNICODE_SURROGATE
 };
 
 #define lept_init(v) do { (v)->type = LEPT_NULL; } while(0)
@@ -58,7 +60,7 @@ enum {
 /*
  * lept_parse - parse json 
  * @param lept_value* v : 接收解析后的树变量，由调用方传入。
- * @param const char* josn: C 字符串, 加上 const 避免函数更改。
+ * @param const char* json: C 字符串, 加上 const 避免函数更改。
  * 一般用法：
  		lept_value v;
  		const char json[] = ...;
