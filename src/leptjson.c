@@ -3,9 +3,11 @@
 #include <stdlib.h> /* NULL */
 #include <string.h> /* strcpy */
 #include <math.h> /* HUGE_VALF, HUGE_VAL, HUGE_VALL */
+#include <stdio.h>
 
 #define EXPECT(c, ch) do { assert(*c->json == (ch)); c->json++; } while(0)
 #define ISDIGIT(ch) ((ch) >= '0' && (ch) <= '9')
+#define ISHEX(ch) (ISDIGIT(ch) || ((ch) >= 'A' && (ch) <= ('F')))
 #define ISDIGIT1TO9(ch) ((ch) >= '1' && (ch) <= '9') 
 #define ISTOOBIG(n) ((n) == HUGE_VAL || (n) == -HUGE_VAL)
 
@@ -80,13 +82,88 @@ static void put_c (lept_context* c, char ch) {
 	*pc = ch;
 }
 
-static const char* lept_parse_hex4(const char* p, unsigned* u) {
+#define IS_UNICODE_HEX(p) (ISHEX(*p) && ISHEX(*(p + 1)) && ISHEX(*(p + 2)) && ISHEX(*(p + 3))) 
 
+/**
+ * 将U+hhhh 的四位十六进制数转换成对应的 unsinged integer.
+ */
+static unsigned convertHexToUnsigned (const char* p) {
+	assert(IS_UNICODE_HEX(p));
+	
+	unsigned u = 0;
+	int i;
+	char ch;
+	for (i = 3; i >= 0; --i) {
+		ch = *(p + (3 - i));
+		u += pow(16, i) * (ISDIGIT(ch) ? 9 - ('9' - ch) : 15 - ('F' - ch));
+	}	
+	return u;
+}
+/**
+ * 将 \Uxxxx 的十六进制数转换成码点 (code point)。
+ *
+ * @param p			待解析的十六进制序列。
+ * @param u 		用于接收码点值。
+ * @param t 		用于接收错误解析时的错误类型。
+ *
+ * @return 			正确返回下一个需要解析的字符，错误则返回 NULL.
+ */
+static const char* lept_parse_hex4(const char* p, unsigned* u, lept_error_type* t) {
+	assert(p != NULL && u != NULL);
+	
+	unsigned high, low;
+	if (IS_UNICODE_HEX(p)) {
+		high = convertHexToUnsigned(p); 
+		if (high >= 0xD800 && high <= 0xDBFF) {
+			if (*(p + 4) == '\\' && *(p + 5) == 'u' && IS_UNICODE_HEX(p + 6)) {
+				low = convertHexToUnsigned(p + 6);
+				if (low >= 0xDC00 && low <= 0xDFFF) {
+					*u = 0x10000 + (high - 0xD800) * 0x400 + (low - 0xDC00);
+					return p + 10;
+				} else {
+					*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+				}
+			} else {
+				*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+			}
+		}	else if (high >= 0xDC00 && high <= 0xDFFF) {
+			*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+		} else {
+			*u = high;
+			return p + 4;
+		}
+	} else {
+		*t = LEPT_PARSE_INVALID_UNICODE_HEX;
+	}
+	return NULL;
 }
 
+/**
+ * 将解析出的码点 code point 转存到 lept_context 中。
+ * @param c			解析上下文
+ * @param u 		码点
+ * @return			无返回值
+ */
 static void lept_encode_utf8(lept_context* c, unsigned u) {
-
+	assert(u >= 0x0 && u <= 0x10FFFF);
+	
+	if (u <= 0x7F) {
+		put_c(c, u & 0x8F);
+	} else if (u >= 0x80 && u <= 0x7FF) {
+		put_c(c, 0xC0 | (u >> 6));
+		put_c(c, 0x80 | (u & 0x3F));
+	} else if (u >=0x800 && u <= 0xFFFF) {
+		put_c(c, 0xE0 | u >> 12);	
+		put_c(c, 0x80 | (u >> 6 & 0x3F));
+		put_c(c, 0x80 | (u & 0x3F));
+	} else {
+		put_c(c, 0xF0 | (u >> 16));
+		put_c(c, 0xE0 | (u >> 12 & 0x3F));	
+		put_c(c, 0x80 | (u >> 6 & 0x3F));
+		put_c(c, 0x80 | (u & 0x3F));
+	}
 }
+
 #define STRING_ERROR(c, ret) do { (c)->top = head; return (ret); } while (0);
 /**
  * 解析字符串。
@@ -94,6 +171,7 @@ static void lept_encode_utf8(lept_context* c, unsigned u) {
 static int lept_parse_string (lept_context* c, lept_value* v) {
 	size_t head = c->top, len;
 	const char* p;
+	lept_error_type t;
 	unsigned u;
 	EXPECT(c, '\"');
 	
@@ -103,7 +181,7 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 
 		switch (ch) {
 			case '\\':
-				switch (ch) {
+				switch (*p++) {
 					case '\"': put_c(c, '\"'); break;
 					case '\\': put_c(c, '\\'); break;
 					case '/': put_c(c, '/'); break;
@@ -113,10 +191,9 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 					case 'r': put_c(c, '\r'); break;
 					case 't': put_c(c, '\t'); break;
 					case 'u':
-						if (!(p = lept_parse_hex4(p, &u))) {
-							STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_HEX);
+						if (!(p = lept_parse_hex4(p, &u, &t))) {
+							STRING_ERROR(c, t);
 						}
-						/* @TODO surrogate handling */
 						lept_encode_utf8(c, u);
 						break;
 					default:

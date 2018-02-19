@@ -41,7 +41,7 @@ typedef struct {
 /**
  * 定义返回值类型。无错误返回 LEPT_PARSE_OK.
  */
-enum {
+typedef enum {
 	LEPT_PARSE_OK = 0,
 	LEPT_PARSE_EXPECT_VALUE, 		// JSON 只含有空白。
 	LEPT_PARSE_INVALID_VALUE,		// 非法的字面值。	
@@ -52,7 +52,7 @@ enum {
 	LEPT_PARSE_INVALID_STRING_CHAR,
 	LEPT_PARSE_INVALID_UNICODE_HEX,
 	LEPT_PARSE_INVALID_UNICODE_SURROGATE
-};
+} lept_error_type;
 
 #define lept_init(v) do { (v)->type = LEPT_NULL; } while(0)
 #define lept_set_null(v) lept_free(v)
