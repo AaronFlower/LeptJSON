@@ -85,57 +85,33 @@ static void put_c (lept_context* c, char ch) {
 #define IS_UNICODE_HEX(p) (ISHEX(*p) && ISHEX(*(p + 1)) && ISHEX(*(p + 2)) && ISHEX(*(p + 3))) 
 
 /**
- * 将U+hhhh 的四位十六进制数转换成对应的 unsinged integer.
- */
-static unsigned convertHexToUnsigned (const char* p) {
-	assert(IS_UNICODE_HEX(p));
-	
-	unsigned u = 0;
-	int i;
-	char ch;
-	for (i = 3; i >= 0; --i) {
-		ch = *(p + (3 - i));
-		u += pow(16, i) * (ISDIGIT(ch) ? 9 - ('9' - ch) : 15 - ('F' - ch));
-	}	
-	return u;
-}
-/**
  * 将 \Uxxxx 的十六进制数转换成码点 (code point)。
  *
  * @param p			待解析的十六进制序列。
  * @param u 		用于接收码点值。
- * @param t 		用于接收错误解析时的错误类型。
  *
  * @return 			正确返回下一个需要解析的字符，错误则返回 NULL.
  */
-static const char* lept_parse_hex4(const char* p, unsigned* u, lept_error_type* t) {
-	assert(p != NULL && u != NULL);
-	
-	unsigned high, low;
-	if (IS_UNICODE_HEX(p)) {
-		high = convertHexToUnsigned(p); 
-		if (high >= 0xD800 && high <= 0xDBFF) {
-			if (*(p + 4) == '\\' && *(p + 5) == 'u' && IS_UNICODE_HEX(p + 6)) {
-				low = convertHexToUnsigned(p + 6);
-				if (low >= 0xDC00 && low <= 0xDFFF) {
-					*u = 0x10000 + (high - 0xD800) * 0x400 + (low - 0xDC00);
-					return p + 10;
-				} else {
-					*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
-				}
-			} else {
-				*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
-			}
-		}	else if (high >= 0xDC00 && high <= 0xDFFF) {
-			*t = LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+static const char* lept_parse_hex4(const char* p, unsigned* u) {
+	assert(p != NULL && u != NULL);	
+
+	int i;
+	char ch;
+	*u = 0;
+	for(i = 0; i <= 3; ++i) {
+		*u = *u << 4;
+		ch = *p++;
+		if (ch >= '0' && ch <= '9') {
+			*u |= (ch - '0');
+		} else if (ch >= 'A' && ch <= 'F') {
+			*u |= (10 + (ch - 'A'));
+		} else if (ch >= 'a' && ch <= 'f') {
+			*u |= (10 + (ch - 'a'));
 		} else {
-			*u = high;
-			return p + 4;
+			return NULL;
 		}
-	} else {
-		*t = LEPT_PARSE_INVALID_UNICODE_HEX;
-	}
-	return NULL;
+	}	
+	return p;
 }
 
 /**
@@ -148,18 +124,18 @@ static void lept_encode_utf8(lept_context* c, unsigned u) {
 	assert(u >= 0x0 && u <= 0x10FFFF);
 	
 	if (u <= 0x7F) {
-		put_c(c, u & 0x8F);
+		put_c(c, u & 0xFF);
 	} else if (u >= 0x80 && u <= 0x7FF) {
 		put_c(c, 0xC0 | (u >> 6));
 		put_c(c, 0x80 | (u & 0x3F));
 	} else if (u >=0x800 && u <= 0xFFFF) {
-		put_c(c, 0xE0 | u >> 12);	
-		put_c(c, 0x80 | (u >> 6 & 0x3F));
+		put_c(c, 0xE0 | ((u >> 12) & 0xFF));	
+		put_c(c, 0x80 | ((u >>  6) & 0x3F));
 		put_c(c, 0x80 | (u & 0x3F));
 	} else {
-		put_c(c, 0xF0 | (u >> 16));
-		put_c(c, 0xE0 | (u >> 12 & 0x3F));	
-		put_c(c, 0x80 | (u >> 6 & 0x3F));
+		put_c(c, 0xF0 | ((u >> 18) & 0xFF));
+		put_c(c, 0xE0 | ((u >> 12) & 0x3F));	
+		put_c(c, 0x80 | ((u >>  6) & 0x3F));
 		put_c(c, 0x80 | (u & 0x3F));
 	}
 }
@@ -171,8 +147,7 @@ static void lept_encode_utf8(lept_context* c, unsigned u) {
 static int lept_parse_string (lept_context* c, lept_value* v) {
 	size_t head = c->top, len;
 	const char* p;
-	lept_error_type t;
-	unsigned u;
+	unsigned high, low, u;
 	EXPECT(c, '\"');
 	
 	p = c->json;
@@ -191,8 +166,28 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 					case 'r': put_c(c, '\r'); break;
 					case 't': put_c(c, '\t'); break;
 					case 'u':
-						if (!(p = lept_parse_hex4(p, &u, &t))) {
-							STRING_ERROR(c, t);
+						if (!(p = lept_parse_hex4(p, &high))) {
+							STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_HEX);
+						}
+						 
+						// Surrogate Check
+						if (high >= 0xD800 && high <= 0xDBFF) {
+							if (*p == '\\' && *(p + 1) == 'u') {
+								if (!(p = lept_parse_hex4(p, &low))) {
+									STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_SURROGATE);
+								}
+								if (low >= 0xDC00 && low <= 0xDFFF) {
+									u = 0x10000 + (high - 0xD800) * 0x400 + (low - 0xDC00);
+								} else {
+									STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_SURROGATE);
+								}
+							} else {
+								STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_SURROGATE);
+							}	
+						} else if (high >= 0xDC00 && high <= 0xDFFF) {
+							STRING_ERROR(c, LEPT_PARSE_INVALID_UNICODE_SURROGATE);
+						} else {
+							u = high; 	
 						}
 						lept_encode_utf8(c, u);
 						break;
