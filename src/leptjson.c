@@ -276,7 +276,7 @@ static int lept_parse_literal (lept_context* c, int expect_value, lept_value *v)
  * @param c 
  * @param end - 数字结束位置
  */
-static int lept_validate_number(lept_context *c, const char *end) {
+static int lept_validate_number(lept_context *c, const char** end) {
 	const char* p = c->json;
 	
 	// pass sign, 过滤掉符号
@@ -300,8 +300,7 @@ static int lept_validate_number(lept_context *c, const char *end) {
 		if (*p == '.') {
 			++p;
 			if (ISDIGIT(*p)) {
-				lept_ignore_digit(&p);
-			}	else {
+				lept_ignore_digit(&p); }	else {
 				return LEPT_PARSE_INVALID_VALUE;		
 			}
 		}
@@ -318,10 +317,8 @@ static int lept_validate_number(lept_context *c, const char *end) {
 			}
 		}
 	}
+	*end = p;
 
-	if (*p != '\0') {
-		return LEPT_PARSE_ROOT_NOT_SINGULAR;
-	}
 	return LEPT_PARSE_OK;
 }
 
@@ -329,18 +326,14 @@ static int lept_validate_number(lept_context *c, const char *end) {
  * 解析数字
  */
 static int lept_parse_number(lept_context *c, lept_value* v) {
-	char *end;
 	int checkRet;
-	if ((checkRet = lept_validate_number(c, end)) != LEPT_PARSE_OK) {
+	const char* end;
+	if ((checkRet = lept_validate_number(c, &end)) != LEPT_PARSE_OK) {
 		return checkRet;
 	}
 	
-	v->u.n = strtod(c->json, &end);
+	v->u.n = strtod(c->json, NULL);
 
-	if (c->json == end) {
-		return LEPT_PARSE_INVALID_VALUE;
-	}
-	
 	if (ISTOOBIG(v->u.n)) {
 		return LEPT_PARSE_NUMBER_TOO_BIG;
 	}
@@ -429,6 +422,7 @@ int lept_parse (lept_value* v, const char* json) {
 	if ((ret = lept_parse_value(&c, v)) == LEPT_PARSE_OK) {
 		lept_parse_whitespace(&c);
 		if (*c.json != '\0') {
+			v->type = LEPT_NULL;
 			return LEPT_PARSE_ROOT_NOT_SINGULAR;
 		}
 	}
