@@ -28,7 +28,7 @@ static int test_pass = 0;
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.10g")
 #define EXPECT_EQ_STRING(expect, actual, len) EXPECT_EQ_BASE(strncmp((expect), (actual), (len)) == 0, expect, actual, "%s")
 
-#define EXPECT_EQ_SIZE_T(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)(expect), (size_t)(expect), "%zU")
+#define EXPECT_EQ_SIZE_T(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)(expect), (size_t)(actual), "%zU")
 #define EXPECT_EQ_BOOLEAN(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 
 #define TEST_LITERAL(expect, json)\
@@ -240,9 +240,21 @@ static void test_parse_array () {
 	EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
 
 	lept_init(&v);
-	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[false, true, null, 12]"));
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ null , false , true , 123 , \"abc\" ]"));
 	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
 	EXPECT_EQ_SIZE_T(5, lept_get_array_size(&v));
+	
+	// 所以那我们还需要再实现一个迭代器。
+	size_t i;
+	size_t len = lept_get_array_size(&v); 
+	for (i = 0; i < len; ++i) {
+		printf("v[%zU] type is %d \n", i, lept_get_type(lept_get_array_element(&v, i)));
+	} 
+	
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]"));
+	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+	EXPECT_EQ_SIZE_T(4, lept_get_array_size(&v));
 
 	lept_free(&v);
 }
