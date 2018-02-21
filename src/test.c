@@ -28,6 +28,7 @@ static int test_pass = 0;
 #define EXPECT_EQ_DOUBLE(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.10g")
 #define EXPECT_EQ_STRING(expect, actual, len) EXPECT_EQ_BASE(strncmp((expect), (actual), (len)) == 0, expect, actual, "%s")
 
+#define EXPECT_EQ_SIZE_T(expect, actual) EXPECT_EQ_BASE((expect) == (actual), (size_t)(expect), (size_t)(expect), "%zU")
 #define EXPECT_EQ_BOOLEAN(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
 
 #define TEST_LITERAL(expect, json)\
@@ -74,7 +75,7 @@ static void test_parse_number () {
 	TEST_NUMBER(-1.0, "-1.0");
 	TEST_NUMBER(1.5, "1.5");
 	TEST_NUMBER(-1.5, "-1.5");
-	TEST_NUMBER(3.1415, "3.1415");
+	TEST_NUMBER(3.1415, " 3.1415");
 	TEST_NUMBER(1E10, "1E10");
 	TEST_NUMBER(1e10, "1e10");
 	TEST_NUMBER(1E+10, "1E+10");
@@ -225,6 +226,27 @@ static void test_parse_string () {
 	TEST_STRING("Hello", "\"Hello\"");
 }
 
+static void test_parse_array () {
+	lept_value v;
+	
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[]"));
+	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+	EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
+
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[			]"));
+	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+	EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
+
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[false, true, null, 12]"));
+	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+	EXPECT_EQ_SIZE_T(5, lept_get_array_size(&v));
+
+	lept_free(&v);
+}
+
 static void test_parse_expect_value () {
 	TEST_ERROR(LEPT_PARSE_EXPECT_VALUE, "");
 	TEST_ERROR(LEPT_PARSE_EXPECT_VALUE, " ");
@@ -238,6 +260,7 @@ static void test_parse () {
   test_parse_root_not_singular();
   test_parse_number_too_big();
   test_parse_string();
+	test_parse_array(); 
 
 	test_parse_invalid_string_escape();
 	test_parse_invalid_string_char();

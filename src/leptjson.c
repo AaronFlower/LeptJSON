@@ -25,10 +25,12 @@ typedef struct {
 	size_t top; 	// 栈顶位置。 
 } lept_context;
 
+static int lept_parse_value(lept_context* c, lept_value* v);
+
 /** 解析字符时的堆栈操作 **/
 /* 
- * lept_context_push 入栈操作, 在解析字符串时, 每次入栈的大小都是 1。
- * 入栈进先考虑栈的容量的是否还允许，不允许的话则按 1.5 倍扩充。
+ * lept_context_push 入栈操作, 在解析JSON时, 根据每次入栈的大小,
+ * 先考虑栈的容量的是否还允许，不允许的话则按 1.5 倍扩充。
  * 最后返回入栈的元素指针，供外面赋值。
  * 
  * @param c 		解析时的上下文。
@@ -217,7 +219,7 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
  * 文本解析时过滤掉其中的空白, 将指针移动到非空白字符的位置。
  */
 static void lept_parse_whitespace(lept_context* c) {
-	const char *p = c->json;
+	const char* p = c->json;
 	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {
 		p++;
 	}
@@ -347,12 +349,61 @@ static int lept_parse_number(lept_context *c, lept_value* v) {
 	return LEPT_PARSE_OK;
 }
 
-static int lept_parse_value(lept_context *c, lept_value* v) {
+/**
+ * 解析数组
+ */
+static int lept_parse_array(lept_context* c, lept_value* v) {
+	assert(v != NULL);
+	EXPECT(c, '[');
+	
+	int ret;
+	size_t size = 0;
+	
+	lept_parse_whitespace(c);
+	if (*c->json == ']') {
+		c->json++;
+		v->type = LEPT_ARRAY;
+		v->u.a.size = 0;
+		v->u.a.e = NULL;
+		return LEPT_PARSE_OK;
+	}
+	
+	for (;;) {
+		lept_value e;
+		lept_init(&e);
+
+		lept_parse_whitespace(c);
+		if ((ret = lept_parse_value(c, &e)) == LEPT_PARSE_OK) {
+			lept_parse_whitespace(c);
+			size ++;
+			memcpy(lept_context_push(c, sizeof(lept_value)), &e, sizeof(lept_value));
+			
+			if (*c->json == ',') {
+				c->json++;
+			} else if(*c->json == ']') {
+				c->json++;
+				v->type = LEPT_ARRAY;
+				v->u.a.size = size;
+				size *= sizeof(lept_value);
+				v->u.a.e = malloc(size * v->u.a.size);
+				memcpy(v->u.a.e, lept_context_pop(c, size), size);
+				return LEPT_PARSE_OK;
+			} else {
+				return LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+			}
+		} else {
+			return ret;
+		}
+	}
+}
+
+static int lept_parse_value(lept_context* c, lept_value* v) {
 	switch (*c->json) {
 		case 'n': return lept_parse_literal(c, LEPT_NULL, v);
 		case 'f': return lept_parse_literal(c, LEPT_FALSE, v);
 		case 't': return lept_parse_literal(c, LEPT_TRUE, v);
 		case '"': return lept_parse_string(c, v);
+		case '[': return lept_parse_array(c, v);
 		default: return lept_parse_number(c, v);
 		case '\0': return LEPT_PARSE_EXPECT_VALUE;
 	}
@@ -459,4 +510,22 @@ void lept_set_boolean(lept_value* v, int b) {
 lept_type lept_get_null(const lept_value* v) {
 	assert(v != NULL && v->type == LEPT_NULL);
 	return LEPT_NULL;
+}
+
+/**
+ * 获取JSON 数组的元素个数。
+ */
+size_t lept_get_array_size(const lept_value* v) {
+	assert(v != NULL && v->type == LEPT_ARRAY);
+	return v->u.a.size;
+}
+
+/**
+ * 获取 JSON 数组中的某个元素.
+ */
+lept_value* lept_get_array_element(const lept_value* v, size_t index) {
+	assert(v != NULL && v->type == LEPT_ARRAY);
+	assert(index < v->u.a.size);
+
+	return &(v->u.a.e[index]);
 }
