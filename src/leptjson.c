@@ -350,7 +350,7 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 	EXPECT(c, '[');
 	
 	int ret;
-	size_t size = 0;
+	size_t i, size = 0;
 	
 	lept_parse_whitespace(c);
 	if (*c->json == ']') {
@@ -385,9 +385,19 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 				return LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
 			}
 		} else {
-			return ret;
+			break;	
 		}
 	}
+
+	/**
+	 * 对于从 break 退出 for 循环的情况，要依次弹出栈把之前已经分配的内存给释放掉.
+	 * 如果不释放的话会在	assert(c.top == 0); 失败。
+	 * Pop and free values on the stack.
+	 */
+	for (i=0; i < size; ++i) {
+		lept_free((lept_value*)lept_context_pop(c, sizeof(lept_value)));
+	}	
+	return ret;
 }
 
 static int lept_parse_value(lept_context* c, lept_value* v) {
@@ -452,11 +462,25 @@ double lept_get_number(const lept_value *v) {
 	return v->u.n;
 }
 
+/**
+ * 释放元素所分配的内存。
+ */
 void lept_free (lept_value *v) {
 	assert(v != NULL);
+	size_t i;
 
-	if (v->type == LEPT_STRING) {
-		free(v->u.s.s);
+	switch (v->type) {
+		case LEPT_STRING: 
+			free(v->u.s.s);
+			break;
+		
+		case LEPT_ARRAY:
+			for (i = 0; i < v->u.a.size; ++i) {
+				lept_free(&v->u.a.e[i]);
+			}	
+			free(v->u.a.e);
+			break;
+		default: break;
 	}
 	
 	v->type = LEPT_NULL;
