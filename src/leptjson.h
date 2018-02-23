@@ -25,6 +25,7 @@ typedef enum {
  */
 // forward declare
 typedef struct lept_value lept_value;
+typedef struct lept_member lept_member;
 
 struct lept_value {
 	union {
@@ -39,11 +40,21 @@ struct lept_value {
 			lept_value* e;
 			size_t size;
 		} a;
+
+		struct {
+			lept_member* m;
+			size_t size;
+		} o;
 	} u;
 
 	lept_type type;
 };
 
+struct lept_member {
+	char* k;			// member key string.
+	size_t klen; 	// member key string length.
+	lept_value v; // member value.
+}
 
 // API
 
