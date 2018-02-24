@@ -52,9 +52,9 @@ struct lept_value {
 
 struct lept_member {
 	char* k;			// member key string.
-	size_t klen; 	// member key string length.
+	size_t klen; 	// member key string length. 我们也需要保存字符串的长度，因为字符串本身可能包含空字符 \u0000 
 	lept_value v; // member value.
-}
+};
 
 // API
 
@@ -72,7 +72,10 @@ typedef enum {
 	LEPT_PARSE_INVALID_STRING_CHAR,
 	LEPT_PARSE_INVALID_UNICODE_HEX,
 	LEPT_PARSE_INVALID_UNICODE_SURROGATE,
-	LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET
+	LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET,
+	LEPT_PARSE_MISS_KEY,
+	LEPT_PARSE_MISS_COLON,
+	LEPT_PARSE_MISS_COMMA_OR_CURLY_BRACKET
 } lept_error_type;
 
 #define lept_init(v) do { (v)->type = LEPT_NULL; } while(0)
@@ -119,4 +122,10 @@ lept_type lept_get_null(const lept_value* v);
 
 size_t lept_get_array_size(const lept_value* v);
 lept_value* lept_get_array_element(const lept_value* v, size_t size);
+
+size_t lept_get_object_size(const lept_value* v);
+const char* lept_get_object_key(const lept_value* v, size_t index);
+size_t lept_get_object_key_length(const lept_value* v, size_t index);
+lept_value* lept_get_object_value(const lept_value* v, size_t index);
+
 #endif
