@@ -144,10 +144,11 @@ static void lept_encode_utf8(lept_context* c, unsigned u) {
 
 #define STRING_ERROR(c, ret) do { (c)->top = head; return (ret); } while (0);
 /**
- * 解析字符串。
+ * 解析字符串供 Object member ker 和 JSON string 使用。
+ * 把解析出的字符串写入到 str 和 len 使用。
  */
-static int lept_parse_string (lept_context* c, lept_value* v) {
-	size_t head = c->top, len;
+static int lept_parse_string_raw (lept_context* c, char **str, size_t* len) {
+	size_t head = c->top;
 	const char* p;
 	unsigned high, low, u;
 	EXPECT(c, '\"');
@@ -198,8 +199,9 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 				};
 				break;
 			case '\"':
-				len = c->top - head;
-				lept_set_string(v, (const char*)lept_context_pop(c, len), len);
+				*len = c->top - head;
+				*str = (char *)malloc(*len);
+				memcpy(*str, (char*)lept_context_pop(c, *len), *len);
 				c->json = p;
 				return LEPT_PARSE_OK;
 			case '\0':
@@ -213,6 +215,22 @@ static int lept_parse_string (lept_context* c, lept_value* v) {
 				put_c(c, ch);
 		}
 	}
+}
+
+
+/**
+ * 解析字符串。
+ */
+static int lept_parse_string (lept_context* c, lept_value* v) {
+	char *str;
+	int ret;
+	size_t len;
+	
+	if ((ret = lept_parse_string_raw(c, &str, &len)) == LEPT_PARSE_OK) {
+		lept_set_string(v, str, len);	
+		free(str);
+	}
+	return ret;
 }
 
 /**
