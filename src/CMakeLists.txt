@@ -13,6 +13,7 @@ endif()
 
 file (GLOB SRCS *.c *.h)
 
+add_library(leptcontext leptcontext.c)
 add_library(leptjson leptjson.c)
 add_executable(leptjson_test ${SRCS})
-target_link_libraries(leptjson_test leptjson)
+target_link_libraries(leptjson_test leptjson leptcontext)
