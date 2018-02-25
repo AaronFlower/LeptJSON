@@ -295,45 +295,46 @@ static int lept_parse_number(lept_context *c, lept_value* v) {
  */
 static int lept_parse_array(lept_context* c, lept_value* v) {
 	assert(v != NULL);
-	EXPECT(c, '[');
-	
+
 	int ret;
 	size_t i, size = 0;
 	
+	EXPECT(c, '[');
 	lept_parse_whitespace(c);
 	if (*c->json == ']') {
-		c->json++;
+		c->json ++;
 		v->type = LEPT_ARRAY;
 		v->u.a.size = 0;
 		v->u.a.e = NULL;
 		return LEPT_PARSE_OK;
 	}
-	
+
 	for (;;) {
 		lept_value e;
 		lept_init(&e);
 
-		lept_parse_whitespace(c);
 		if ((ret = lept_parse_value(c, &e)) == LEPT_PARSE_OK) {
-			lept_parse_whitespace(c);
 			size ++;
-			memcpy(lept_context_push(c, sizeof(lept_value)), &e, sizeof(lept_value));
-			
-			if (*c->json == ',') {
-				c->json++;
-			} else if(*c->json == ']') {
-				c->json++;
-				v->type = LEPT_ARRAY;
-				v->u.a.size = size;
-				size *= sizeof(lept_value);
-				v->u.a.e = malloc(size * v->u.a.size);
-				memcpy(v->u.a.e, lept_context_pop(c, size), size);
-				return LEPT_PARSE_OK;
-			} else {
-				return LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
-			}
+			memcpy((lept_value *)lept_context_push(c, sizeof(lept_value)), &e, sizeof(lept_value));
 		} else {
-			break;	
+			break;
+		}
+
+		lept_parse_whitespace(c);
+		
+		if(*c->json == ',') {
+			c->json ++;
+			lept_parse_whitespace(c);
+		} else if (*c->json == ']') {
+			c->json ++;
+			v->type = LEPT_ARRAY;
+			v->u.a.size = size;
+			size *= sizeof(lept_value);
+			v->u.a.e = malloc(size);
+			memcpy(v->u.a.e, lept_context_pop(c, size), size);
+			return LEPT_PARSE_OK;	
+		} else {
+			return LEPT_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
 		}
 	}
 
@@ -342,9 +343,9 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 	 * 如果不释放的话会在	assert(c.top == 0); 失败。
 	 * Pop and free values on the stack.
 	 */
-	for (i=0; i < size; ++i) {
-		lept_free((lept_value*)lept_context_pop(c, sizeof(lept_value)));
-	}	
+	for (i = 0; i < size; ++i) {
+		lept_free((lept_value *)lept_context_pop(c, sizeof(lept_value)));	
+	}
 	return ret;
 }
 
@@ -412,6 +413,7 @@ double lept_get_number(const lept_value *v) {
 
 /**
  * 释放元素所分配的内存。
+ * 这些内存都是 lept_context 栈压入的。
  */
 void lept_free (lept_value *v) {
 	assert(v != NULL);

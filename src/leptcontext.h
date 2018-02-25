@@ -1,5 +1,5 @@
 #ifndef LEPT_CONTEXT_H__
-#define LEPT_CONTEXY_H__
+#define LEPT_CONTEXT_H__
 
 #ifndef LEPT_PARSE_STACK_INIT_SIZE 
 #define LEPT_PARSE_STACK_INIT_SIZE 256 	// 使用者在编译时可以自行设置宏。
